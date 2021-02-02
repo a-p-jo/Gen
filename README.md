@@ -1,5 +1,3 @@
-# Make
+# Gen
 
-A simple personal program that skips the need to dabble with build-systems- written in C , for C.
-
-Uses system() from stdlib.h and works on any POSIX-compliant OS with a CC.
+A simple personal script to compile C programs in POSIX systems.
