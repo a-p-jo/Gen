@@ -4,7 +4,8 @@
 IF_DARWIN_AND_CLANG_MAKE_UNIVERSALS = True
 IF_NOT_DARWIN_COMPILE_BOTH_STATIC_AND_DYNAMIC = False
 IF_NOT_BOTH_THEN_JUST_DYNAMIC = True
-PRINT_PROGRESS = True
+PRINT_PROGRESS = False
+SILENCE_ALL_BUILD_TOOLS = False
 
 #Defaults :
 OPTIMIZATION_CMD = ""
@@ -56,10 +57,12 @@ Supported_Compiler = "GCC" in compiler or "Clang" in compiler
 '''
 
 if argc >= 3 and Supported_OS and Supported_Compiler :
+
     sources = argv[1]
     outfile = argv[2]
     space = " "
     quote = '"'
+    enforce_silence = " &> /dev/null" * SILENCE_ALL_BUILD_TOOLS
 
     if argc >= 5:
         '''
@@ -130,7 +133,7 @@ if argc >= 3 and Supported_OS and Supported_Compiler :
 
         if "Clang" in compiler and IF_DARWIN_AND_CLANG_MAKE_UNIVERSALS :
             x86_outfile = ".temp_x86_" + outfile
-            COMPILE_x86_64 = INVOKE_CC + space + WARNING_CMD + space + OPTIMIZATION_CMD + space + quote + sources + quote + space + "-o" + space + quote + x86_outfile + quote
+            COMPILE_x86_64 = INVOKE_CC + space + WARNING_CMD + space + OPTIMIZATION_CMD + space + quote + sources + quote + space + "-o" + space + quote + x86_outfile + quote + enforce_silence
 
             if PRINT_PROGRESS :
                 print("(x86_64)",COMPILE_x86_64)
@@ -145,14 +148,14 @@ if argc >= 3 and Supported_OS and Supported_Compiler :
 
             os.system(COMPILE_ARM_64)
 
-            LIPO_COMBINE = "lipo -create -output" + space + quote  + outfile + quote + space + quote + x86_outfile + quote + space + quote + arm_outfile + quote
+            LIPO_COMBINE = "lipo -create -output" + space + quote  + outfile + quote + space + quote + x86_outfile + quote + space + quote + arm_outfile + quote + enforce_silence
 
             if PRINT_PROGRESS :
                 print("(lipo)",LIPO_COMBINE)
 
             os.system(LIPO_COMBINE)
 
-            CLEANUP = "rm" + space + quote + x86_outfile + quote + space + quote + arm_outfile + quote
+            CLEANUP = "rm" + space + quote + x86_outfile + quote + space + quote + arm_outfile + quote + enforce_silence
 
             if PRINT_PROGRESS :
                 print("(cleanup)",CLEANUP)
@@ -160,7 +163,7 @@ if argc >= 3 and Supported_OS and Supported_Compiler :
             os.system(CLEANUP)
         
         else :
-            COMPILE = INVOKE_CC + space + WARNING_CMD + space + OPTIMIZATION_CMD + space + quote + sources + quote + space + "-o" + space + quote + outfile + quote
+            COMPILE = INVOKE_CC + space + WARNING_CMD + space + OPTIMIZATION_CMD + space + quote + sources + quote + space + "-o" + space + quote + outfile + quote + enforce_silence
             
             if PRINT_PROGRESS :
                 print(COMPILE)
@@ -170,7 +173,7 @@ if argc >= 3 and Supported_OS and Supported_Compiler :
     else :
         if IF_NOT_DARWIN_COMPILE_BOTH_STATIC_AND_DYNAMIC :
             static_outfile = STATIC_BIN_PREFIX + outfile
-            COMPILE_STATIC = INVOKE_CC + space + "-static" + space + WARNING_CMD + space + OPTIMIZATION_CMD + space + quote + sources + quote + space + "-o" + space + quote + static_outfile + quote
+            COMPILE_STATIC = INVOKE_CC + space + "-static" + space + WARNING_CMD + space + OPTIMIZATION_CMD + space + quote + sources + quote + space + "-o" + space + quote + static_outfile + quote + enforce_silence
 
             if PRINT_PROGRESS:
                 print("(static)",COMPILE_STATIC)
@@ -178,7 +181,7 @@ if argc >= 3 and Supported_OS and Supported_Compiler :
             os.system(COMPILE_STATIC)
 
             dynamic_outfile = DYNAMIC_BIN_PREFIX + outfile
-            COMPILE_DYNAMIC = INVOKE_CC + space + WARNING_CMD + space + OPTIMIZATION_CMD + space + quote + sources + quote + space + "-o" + space + quote + dynamic_outfile + quote
+            COMPILE_DYNAMIC = INVOKE_CC + space + WARNING_CMD + space + OPTIMIZATION_CMD + space + quote + sources + quote + space + "-o" + space + quote + dynamic_outfile + quote + enforce_silence
 
             if PRINT_PROGRESS:
                 print("(dyanmic)",COMPILE_DYNAMIC)
@@ -186,7 +189,7 @@ if argc >= 3 and Supported_OS and Supported_Compiler :
             os.system(COMPILE_DYNAMIC)
 
         else :
-            COMPILE = INVOKE_CC + space + ("-static" * (not IF_NOT_BOTH_THEN_JUST_DYNAMIC)) + space + WARNING_CMD + space + OPTIMIZATION_CMD + space + quote + sources + quote + space + "-o" + space + quote + outfile + quote
+            COMPILE = INVOKE_CC + space + ("-static" * (not IF_NOT_BOTH_THEN_JUST_DYNAMIC)) + space + WARNING_CMD + space + OPTIMIZATION_CMD + space + quote + sources + quote + space + "-o" + space + quote + outfile + quote + enforce_silence
 
             if PRINT_PROGRESS :
                 print(COMPILE)
