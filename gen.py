@@ -1,12 +1,30 @@
 #! /usr/bin/env python3
 
-#DEFAULTS :
+#Settings :
 IF_DARWIN_AND_CLANG_MAKE_UNIVERSALS = True
+IF_NOT_DARWIN_COMPILE_BOTH_STATIC_AND_DYNAMIC = False
+IF_NOT_BOTH_THEN_JUST_DYNAMIC = True
 PRINT_PROGRESS = True
 
+#Defaults :
 OPTIMIZATION_CMD = ""
 WARNING_CMD = ""
 INVOKE_CC = "cc"
+
+WARNING_LEVEL_0 = "-w"
+WARNING_LEVEL_1 = "-Wall"
+WARNING_LEVEL_2 = "-Wall -Wextra -pedantic"
+WARNING_LEVEL_3 = "-Wall -Wextra -pedantic -Wconversion"
+WARNING_LEVEL_3_CLANG = "-Weverything"
+
+OPTIMIZATION_LEVEL_1 = "-o1"
+OPTIMIZATION_LEVEL_2 = "-o2"
+OPTIMIZATION_LEVEL_3 = "-o3"
+
+STATIC_BIN_PREFIX = "static_"
+DYNAMIC_BIN_PREFIX = "dynamic_"
+
+#  Format : ./gen.py [source] [output]  [warning level (OPTIONAL)] [optimization level (OPTIONAL)]
 
 '''
 # Import :
@@ -18,12 +36,8 @@ import sys
 import os
 import platform
 
-argc = len(sys.argv)
 argv = sys.argv
-
-'''
-# ./make [source file(s)] [output file]  [warning level (OPTIONAL)] [optimization level (OPTIONAL)]
-'''
+argc = len(argv)
 
 '''System Information Analysis
 # Get operating system name
@@ -56,19 +70,19 @@ if argc >= 3 and Supported_OS and Supported_Compiler :
         optimization_number = int(argv[4])
 
         if warning_number == 0 :
-            WARNING_CMD = "-w"
+            WARNING_CMD = WARNING_LEVEL_0
 
         elif warning_number == 1:
-            WARNING_CMD = "-Wall"
+            WARNING_CMD = WARNING_LEVEL_1
 
         elif warning_number == 2:
-            WARNING_CMD = "-Wall -Wextra -pedantic"
+            WARNING_CMD = WARNING_LEVEL_2
 
         elif warning_number == 3:
             if "Clang" in compiler :
-                WARNING_CMD = "-Weverything"
+                WARNING_CMD = WARNING_LEVEL_3_CLANG
             else :
-                WARNING_CMD = "-Wall -Wextra -pedantic -Wconversion"
+                WARNING_CMD = WARNING_LEVEL_3
 
         else :
             print("Invalid warning option. Used defaults...")
@@ -82,70 +96,102 @@ if argc >= 3 and Supported_OS and Supported_Compiler :
         '''
 
         if optimization_number == 1 :
-            OPTIMIZATION_CMD = "-o1"
+            OPTIMIZATION_CMD = OPTIMIZATION_LEVEL_1
 
         elif optimization_number == 2 :
-            OPTIMIZATION_CMD = "-o2"
+            OPTIMIZATION_CMD = OPTIMIZATION_LEVEL_2
 
         elif optimization_number == 3 :
-            OPTIMIZATION_CMD = "-o3"
+            OPTIMIZATION_CMD = OPTIMIZATION_LEVEL_3
 
         else :
             print("Invalid optimization input. Used defaults...")
 
     '''
-    # Now check the OS, compiler and relevant setting to see if compilation will be "normal" or a
-    # "Universal App" is to be made.
+    # Now check the OS.
     #
-    # If macOS with Clang is detected, and it is allowed, make the x86_64 binary and the arm64 binary.
-    # then use lipo to combine them into a "universal app" as demonstrated at source. Then, delete those binaries.
+    # If macOS is detected :
+    #   if Clang is CC + making universals is allowed :
+    #       -> compile an x86 binary &  compile an arm binary
+    #       -> lipo them to make universal bin (see source) and the delte them.
+    #   else :
+    #       -> compile normally into a standard binary.
     #
     # Source : https://developer.apple.com/documentation/xcode/building_a_universal_macos_binary 
     #
-    # Otherwise, just combine all compilation options into a string and execute the compilation
-    # command.
+    # Else :
+    #   -> If configuration is set to make static AND dynamic binaries, do that.
+    #   -> Else , make a normal and standard binary
     #
     # In either conditions, print progress step-by-step if allowed.
     '''
     
-    if Operating_System == "Darwin" and "Clang" in compiler and IF_DARWIN_AND_CLANG_MAKE_UNIVERSALS :
-        x86_outfile = ".temp_x86_" + outfile
-        COMPILE_x86_64 = INVOKE_CC + space + WARNING_CMD + space + OPTIMIZATION_CMD + space + quote + sources + quote + space + "-o" + space + quote + x86_outfile + quote
+    if Operating_System == "Darwin" :
 
-        if PRINT_PROGRESS :
-            print("(x86_64)",COMPILE_x86_64)
+        if "Clang" in compiler and IF_DARWIN_AND_CLANG_MAKE_UNIVERSALS :
+            x86_outfile = ".temp_x86_" + outfile
+            COMPILE_x86_64 = INVOKE_CC + space + WARNING_CMD + space + OPTIMIZATION_CMD + space + quote + sources + quote + space + "-o" + space + quote + x86_outfile + quote
 
-        os.system(COMPILE_x86_64)
+            if PRINT_PROGRESS :
+                print("(x86_64)",COMPILE_x86_64)
 
-        arm_outfile = ".temp_arm_" + outfile
-        COMPILE_ARM_64 = INVOKE_CC + space + "-w" + space + OPTIMIZATION_CMD + space + quote + sources + quote + space + "-o" + space + quote + arm_outfile + quote + space + "-target arm64-apple-macos11"
+            os.system(COMPILE_x86_64)
 
-        if PRINT_PROGRESS :
-            print("(arm64)",COMPILE_ARM_64)
+            arm_outfile = ".temp_arm_" + outfile
+            COMPILE_ARM_64 = INVOKE_CC + space + OPTIMIZATION_CMD + space + quote + sources + quote + space + "-o" + space + quote + arm_outfile + quote + space + "-target arm64-apple-macos11" + space + "&> /dev/null"
 
-        os.system(COMPILE_ARM_64)
+            if PRINT_PROGRESS :
+                print("(arm64)",COMPILE_ARM_64)
 
-        LIPO_COMBINE = "lipo -create -output" + space + quote  + outfile + quote + space + quote + x86_outfile + quote + space + quote + arm_outfile + quote
+            os.system(COMPILE_ARM_64)
 
-        if PRINT_PROGRESS :
-            print("(lipo)",LIPO_COMBINE)
+            LIPO_COMBINE = "lipo -create -output" + space + quote  + outfile + quote + space + quote + x86_outfile + quote + space + quote + arm_outfile + quote
 
-        os.system(LIPO_COMBINE)
+            if PRINT_PROGRESS :
+                print("(lipo)",LIPO_COMBINE)
 
-        CLEANUP = "rm" + space + quote + x86_outfile + quote + space + quote + arm_outfile + quote
+            os.system(LIPO_COMBINE)
 
-        if PRINT_PROGRESS :
-            print("(cleanup)",CLEANUP)
+            CLEANUP = "rm" + space + quote + x86_outfile + quote + space + quote + arm_outfile + quote
 
-        os.system(CLEANUP)
+            if PRINT_PROGRESS :
+                print("(cleanup)",CLEANUP)
+
+            os.system(CLEANUP)
+        
+        else :
+            COMPILE = INVOKE_CC + space + WARNING_CMD + space + OPTIMIZATION_CMD + space + quote + sources + quote + space + "-o" + space + quote + outfile + quote
+            
+            if PRINT_PROGRESS :
+                print(COMPILE)
+            
+            os.system(COMPILE)
 
     else :
-        COMPILE = INVOKE_CC + space + WARNING_CMD + space + OPTIMIZATION_CMD + space + quote + sources + quote + space + "-o" + space + quote + outfile + quote
+        if IF_NOT_DARWIN_COMPILE_BOTH_STATIC_AND_DYNAMIC :
+            static_outfile = STATIC_BIN_PREFIX + outfile
+            COMPILE_STATIC = INVOKE_CC + space + "-static" + space + WARNING_CMD + space + OPTIMIZATION_CMD + space + quote + sources + quote + space + "-o" + space + quote + static_outfile + quote
 
-        if PRINT_PROGRESS :
-            print(COMPILE)
+            if PRINT_PROGRESS:
+                print("(static)",COMPILE_STATIC)
+            
+            os.system(COMPILE_STATIC)
 
-        os.system(COMPILE)
+            dynamic_outfile = DYNAMIC_BIN_PREFIX + outfile
+            COMPILE_DYNAMIC = INVOKE_CC + space + WARNING_CMD + space + OPTIMIZATION_CMD + space + quote + sources + quote + space + "-o" + space + quote + dynamic_outfile + quote
+
+            if PRINT_PROGRESS:
+                print("(dyanmic)",COMPILE_DYNAMIC)
+            
+            os.system(COMPILE_DYNAMIC)
+
+        else :
+            COMPILE = INVOKE_CC + space + ("-static" * (not IF_NOT_BOTH_THEN_JUST_DYNAMIC)) + space + WARNING_CMD + space + OPTIMIZATION_CMD + space + quote + sources + quote + space + "-o" + space + quote + outfile + quote
+
+            if PRINT_PROGRESS :
+                print(COMPILE)
+
+            os.system(COMPILE)
 
 else:
 
