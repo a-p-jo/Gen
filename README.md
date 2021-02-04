@@ -1,3 +1,3 @@
 # Gen
 
-A simple personal script to compile C programs in POSIX systems with Clang or GCC.
+Simple script to compile with Clang or GCC in POSIX systems.
