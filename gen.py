@@ -64,13 +64,12 @@ if argc >= 3 and Supported_OS and Supported_Compiler :
     quote = '"'
     enforce_silence = " &> /dev/null" * SILENCE_ALL_BUILD_TOOLS
 
-    if argc >= 5:
+    if argc >= 4:
         '''
         # If there are more arguments , consider them; if valid ints,
         # create suitable warning and optimization compilation options.   
         '''
         warning_number = int(argv[3])
-        optimization_number = int(argv[4])
 
         if warning_number == 0 :
             WARNING_CMD = WARNING_LEVEL_0
@@ -98,17 +97,21 @@ if argc >= 3 and Supported_OS and Supported_Compiler :
         # so was not bothered with.
         '''
 
-        if optimization_number == 1 :
-            OPTIMIZATION_CMD = OPTIMIZATION_LEVEL_1
+        if argc >= 5:
 
-        elif optimization_number == 2 :
-            OPTIMIZATION_CMD = OPTIMIZATION_LEVEL_2
+            optimization_number = int(argv[4])
 
-        elif optimization_number == 3 :
-            OPTIMIZATION_CMD = OPTIMIZATION_LEVEL_3
+            if optimization_number == 1 :
+                OPTIMIZATION_CMD = OPTIMIZATION_LEVEL_1
 
-        else :
-            print("Invalid optimization input. Used defaults...")
+            elif optimization_number == 2 :
+                OPTIMIZATION_CMD = OPTIMIZATION_LEVEL_2
+
+            elif optimization_number == 3 :
+                OPTIMIZATION_CMD = OPTIMIZATION_LEVEL_3
+
+            else :
+                print("Invalid optimization input. Used defaults...")
 
     '''
     # Now check the OS.
